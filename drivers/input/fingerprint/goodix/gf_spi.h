@@ -7,6 +7,7 @@
 #define __GF_SPI_H
 
 #include <linux/types.h>
+#include <linux/notifier.h>
 /**********************************************************/
 enum FP_MODE {
 	GF_IMAGE_MODE = 0,
@@ -34,7 +35,7 @@ enum FP_MODE {
 #define GF_KEY_INPUT_BACK		KEY_BACK
 #define GF_KEY_INPUT_POWER		KEY_POWER
 #define GF_KEY_INPUT_CAMERA		KEY_CAMERA
-#define GF_KEY_INPUT_DOUBLE		BTN_C
+#define GF_KEY_INPUT_DOUBLE     BTN_C
 
 #if defined(SUPPORT_NAV_EVENT)
 typedef enum gf_nav_event {
@@ -136,6 +137,11 @@ struct gf_dev {
 #ifdef GF_FASYNC
 	struct fasync_struct *async;
 #endif
+	struct notifier_block notifier;
+	char device_available;
+	char fb_black;
+	char wait_finger_down;
+	struct work_struct work;
 #ifdef CONFIG_FINGERPRINT_FP_VREG_CONTROL
 	struct regulator *vreg;
 #endif

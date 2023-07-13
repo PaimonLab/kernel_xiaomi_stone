@@ -286,6 +286,9 @@ void fuse_release_common(struct file *file, bool isdir)
 	struct fuse_file *ff = file->private_data;
 	struct fuse_release_args *ra = ff->release_args;
 	int opcode = isdir ? FUSE_RELEASEDIR : FUSE_RELEASE;
+	#if defined(CONFIG_PASSTHROUGH_SYSTEM)
+	fuse_passthrough_release(&ff->passthrough);
+	#endif
 
 	fuse_passthrough_release(&ff->passthrough);
 
@@ -2333,6 +2336,10 @@ static int fuse_file_mmap(struct file *file, struct vm_area_struct *vma)
 	if (ff->passthrough.filp)
 		return fuse_passthrough_mmap(file, vma);
 
+	#if defined(CONFIG_PASSTHROUGH_SYSTEM)
+	if (ff->passthrough.filp)
+		return fuse_passthrough_mmap(file, vma);
+	#endif
 	if (ff->open_flags & FOPEN_DIRECT_IO) {
 		/* Can't provide the coherency needed for MAP_SHARED */
 		if (vma->vm_flags & VM_MAYSHARE)

@@ -141,4 +141,11 @@ config CHARGER_SC8551
 	  Say Y here to enable support of sc8551 divider charger
 	  It is mainly used as divider charger for
 	  direct charge
+
+
+config SM5602_FG
+	tristate "sm5602 fg"
+	default n
+	help
+	  Say Y to enable support for SM5602 fuel gauge
 endif

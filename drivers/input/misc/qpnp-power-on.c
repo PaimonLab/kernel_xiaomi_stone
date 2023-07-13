@@ -28,6 +28,9 @@
 #include <linux/regulator/of_regulator.h>
 
 #define PMIC_VER_8941				0x01
+#ifdef CONFIG_HQ_QGKI
+#include <asm/bootinfo.h>
+#endif
 #define PMIC_VERSION_REG			0x0105
 #define PMIC_VERSION_REV4_REG			0x0103
 
@@ -164,7 +167,10 @@ enum qpnp_pon_version {
 #define QPNP_KEY_STATUS_DELAY			msecs_to_jiffies(250)
 
 #define QPNP_PON_BUFFER_SIZE			9
-
+#ifdef CONFIG_HQ_QGKI
+#define QPNP_PON_SET_PS_HOLD			0x2
+#define QPNP_PON_SET_POWER_KEY			0x80
+#endif
 #define QPNP_POFF_REASON_UVLO			13
 
 enum pon_type {

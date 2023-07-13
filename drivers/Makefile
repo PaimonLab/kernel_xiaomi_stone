@@ -188,3 +188,4 @@ obj-$(CONFIG_INTERCONNECT)	+= interconnect/
 obj-$(CONFIG_COUNTER)		+= counter/
 obj-$(CONFIG_SENSORS_SSC)       += sensors/
 obj-$(CONFIG_SWITCH)            += switch/
+

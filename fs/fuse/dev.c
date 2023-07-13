@@ -1028,6 +1028,22 @@ static int fuse_copy_args(struct fuse_copy_state *cs, unsigned numargs,
 		else
 			err = fuse_copy_one(cs, arg->value, arg->size);
 	}
+	#if defined(CONFIG_PASSTHROUGH_SYSTEM)
+	else if(cmd == FUSE_DEV_IOC_PASSTHROUGH_OPEN){
+		struct fuse_dev *fud;
+		struct fuse_passthrough_out pto;
+		err = -EFAULT;
+		if (!copy_from_user(&pto,
+                                (struct fuse_passthrough_out __user *)arg,
+                                sizeof(pto))) {
+                        err = -EINVAL;
+                        fud = fuse_get_dev(file);
+                        if (fud)
+                                err = fuse_passthrough_open(fud, &pto);
+
+		}
+        }
+	#endif
 	return err;
 }
 

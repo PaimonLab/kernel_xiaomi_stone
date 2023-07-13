@@ -138,7 +138,6 @@ struct f_cdev {
 	unsigned long		nbytes_from_port_bridge;
 
 	struct dentry		*debugfs_root;
-	bool			setup_pending;
 
 	/* To test remote wakeup using debugfs */
 	u8 debugfs_rw_enable;
@@ -549,7 +548,6 @@ static int usb_cser_set_alt(struct usb_function *f, unsigned int intf,
 }
 
 static int port_notify_serial_state(struct cserial *cser);
-static void usb_cser_start_rx(struct f_cdev *port);
 
 static void usb_cser_resume(struct usb_function *f)
 {
@@ -583,14 +581,6 @@ static void usb_cser_resume(struct usb_function *f)
 
 	spin_lock_irqsave(&port->port_lock, flags);
 
-	/* process pending read request */
-	if (port->setup_pending) {
-		pr_info("%s: start_rx called due to rx_out error.\n", __func__);
-		port->setup_pending = false;
-		spin_unlock_irqrestore(&port->port_lock, flags);
-		usb_cser_start_rx(port);
-		spin_lock_irqsave(&port->port_lock, flags);
-	}
 	in = port->port_usb.in;
 	/* process any pending requests */
 	list_for_each_entry_safe(req, t, &port->write_pending, list) {
@@ -1080,10 +1070,7 @@ static void usb_cser_start_rx(struct f_cdev *port)
 			pr_err("port(%d):%pK usb ep(%s) queue failed\n",
 					port->port_num, port, ep->name);
 			list_add(&req->list, pool);
-			port->setup_pending = true;
 			break;
-		} else {
-			port->setup_pending = false;
 		}
 	}
 
