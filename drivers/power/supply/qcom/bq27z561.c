@@ -250,15 +250,12 @@ struct bq_fg_chip {
 	int rm_adjust_max;
 	bool rm_flag;
 
-	/* debug */
-	int skip_reads;
-	int skip_writes;
-
 	int fake_soc;
 	int fake_temp;
 	int fake_volt;
 	int	fake_chip_ok;
 
+	struct wakeup_source *ws;
 	struct	delayed_work monitor_work;
 	struct power_supply *fg_psy;
 	struct power_supply *usb_psy;
@@ -423,9 +420,6 @@ static int fg_write_byte(struct bq_fg_chip *bq, u8 reg, u8 val)
 {
 	int ret;
 
-	if (bq->skip_writes)
-		return 0;
-
 	mutex_lock(&bq->i2c_rw_lock);
 	ret = __fg_write_byte(bq->client, reg, val);
 	mutex_unlock(&bq->i2c_rw_lock);
@@ -436,11 +430,6 @@ static int fg_write_byte(struct bq_fg_chip *bq, u8 reg, u8 val)
 static int fg_read_word(struct bq_fg_chip *bq, u8 reg, u16 *val)
 {
 	int ret;
-
-	if (bq->skip_reads) {
-		*val = 0;
-		return 0;
-	}
 
 	mutex_lock(&bq->i2c_rw_lock);
 	ret = __fg_read_word(bq->client, reg, val);
@@ -453,9 +442,6 @@ static int fg_read_block(struct bq_fg_chip *bq, u8 reg, u8 *buf, u8 len)
 {
 	int ret;
 
-	if (bq->skip_reads)
-		return 0;
-
 	mutex_lock(&bq->i2c_rw_lock);
 	ret = __fg_read_block(bq->client, reg, buf, len);
 	mutex_unlock(&bq->i2c_rw_lock);
@@ -467,9 +453,6 @@ static int fg_read_block(struct bq_fg_chip *bq, u8 reg, u8 *buf, u8 len)
 static int fg_write_block(struct bq_fg_chip *bq, u8 reg, u8 *data, u8 len)
 {
 	int ret;
-
-	if (bq->skip_writes)
-		return 0;
 
 	mutex_lock(&bq->i2c_rw_lock);
 	ret = __fg_write_block(bq->client, reg, data, len);
@@ -977,9 +960,6 @@ static int fg_read_rsoc(struct bq_fg_chip *bq)
 	if (bq->fake_soc > 0)
 		return bq->fake_soc;
 
-	if (bq->skip_reads)
-		return bq->last_soc;
-
 	ret = regmap_read(bq->regmap, bq->regs[BQ_FG_REG_SOC], &soc);
 	if (ret < 0) {
 		bq_dbg(PR_OEM, "could not read RSOC, ret = %d\n", ret);
@@ -1041,20 +1021,15 @@ static int fg_read_temperature(struct bq_fg_chip *bq)
 {
 	int ret;
 	u16 temp = 0;
-	static int last_temp;
 
 	if (bq->fake_temp > 0)
 		return bq->fake_temp;
-
-	if (bq->skip_reads)
-		return last_temp;
 
 	ret = fg_read_word(bq, bq->regs[BQ_FG_REG_TEMP], &temp);
 	if (ret < 0) {
 		bq_dbg(PR_OEM, "could not read temperature, ret = %d\n", ret);
 		return BQ_I2C_FAILED_TEMP;
 	}
-	last_temp = temp - 2730;
 
 	return temp - 2730;
 
@@ -2526,6 +2501,7 @@ static int qg_iio_write_raw(struct iio_dev *indio_dev,
 	struct bq_fg_chip *bq = iio_priv(indio_dev);
 	int rc = 0;
 
+	__pm_stay_awake(bq->ws);
 	switch (chan->channel) {
 	case PSY_IIO_TEMP:
 		bq->fake_temp = val1;
@@ -2556,6 +2532,7 @@ static int qg_iio_write_raw(struct iio_dev *indio_dev,
 		rc = -EINVAL;
 		break;
 	}
+	__pm_relax(bq->ws);
 
 	if (rc < 0)
 		pr_err_ratelimited("Couldn't write IIO channel %d, rc = %d\n",
@@ -2580,6 +2557,7 @@ static int qg_iio_read_raw(struct iio_dev *indio_dev,
 
 	*val1 = 0;
 
+	__pm_stay_awake(bq->ws);
 	switch (chan->channel) {
 	case PSY_IIO_PRESENT:
 		*val1 = 1;
@@ -2799,6 +2777,7 @@ static int qg_iio_read_raw(struct iio_dev *indio_dev,
 		rc = -EINVAL;
 		break;
 	}
+	__pm_relax(bq->ws);
 
 	if (rc < 0) {
 		pr_err_ratelimited("Couldn't read IIO channel %d, rc = %d\n",
@@ -2958,6 +2937,12 @@ static int bq_fg_probe(struct i2c_client *client,
 		pr_err("Failed to initialize QG IIO PSY, rc=%d\n", ret);
 	}
 
+	bq->ws = wakeup_source_register(&client->dev, bq->indio_dev->name);
+	if (!bq->ws) {
+		pr_err("Failed to register wakelock\n");
+		return -ENOMEM;
+	}
+
 	mutex_init(&bq->i2c_rw_lock);
 	mutex_init(&bq->data_lock);
 	device_init_wakeup(bq->dev, 1);
@@ -2988,7 +2973,6 @@ static int bq_fg_suspend(struct device *dev)
 	struct bq_fg_chip *bq = i2c_get_clientdata(client);
 
 	cancel_delayed_work_sync(&bq->monitor_work);
-	bq->skip_reads = true;
 	//do_gettimeofday(&bq->suspend_time);
 
 	return 0;
@@ -3001,7 +2985,6 @@ static int bq_fg_resume(struct device *dev)
 	struct bq_fg_chip *bq = i2c_get_clientdata(client);
 	int delta_time;
 
-	bq->skip_reads = false;
 	calc_suspend_time(&bq->suspend_time, &delta_time);
 
 	if (delta_time > BQ_RESUME_UPDATE_TIME) {
@@ -3018,6 +3001,8 @@ static int bq_fg_resume(struct device *dev)
 static int bq_fg_remove(struct i2c_client *client)
 {
 	struct bq_fg_chip *bq = i2c_get_clientdata(client);
+
+	wakeup_source_unregister(bq->ws);
 
 	mutex_destroy(&bq->data_lock);
 	mutex_destroy(&bq->i2c_rw_lock);
