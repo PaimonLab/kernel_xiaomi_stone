@@ -498,4 +498,4 @@ int lsensor_ATTR_create(struct device_attribute *mlsensor_attr)
 
 	return ret;
 }
-EXPORT_SYMBOL(lsensor_ATTR_creat
+EXPORT_SYMBOL(lsensor_ATTR_create);

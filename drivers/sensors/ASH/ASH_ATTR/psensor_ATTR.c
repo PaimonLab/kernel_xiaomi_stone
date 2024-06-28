@@ -961,4 +961,4 @@ int psensor_ATTR_create(struct device_attribute *mpsensor_attr)
 
 	return ret;
 }
-EXPORT_SYMBOL(psensor_ATTR_cre
+EXPORT_SYMBOL(psensor_ATTR_create);

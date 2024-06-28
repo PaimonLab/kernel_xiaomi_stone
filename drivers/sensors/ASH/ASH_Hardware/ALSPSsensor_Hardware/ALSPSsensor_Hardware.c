@@ -196,11 +196,6 @@ static ALSPS_hw* ALSPS_hw_getHardwareClient(int hardware_source)
 			log("get hardware client : tmd2755 \n");
 			ALSPS_hw_client = ALSPS_hw_tmd2755_getHardware();
 			break;
-#else
-		case ALSPS_hw_source_vcnl36866:
-			log("get hardware client : vcnl36866 \n");
-			ALSPS_hw_client = ALSPS_hw_vcnl36866_getHardware();
-			break;
 #endif
 		default:
 			err("get hardware client ERROR : hardware enum=%d\n", hardware_source);
