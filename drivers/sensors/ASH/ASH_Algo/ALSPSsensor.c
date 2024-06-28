@@ -230,7 +230,29 @@ struct lsensor_data
 	/* ASUS BSP Clay: average 5 lux for offset behavior to mitigate the low lux gap --- */
 
 	bool freeze_psensor;
+
+	bool irq_enabled;
 };
+
+static void alsps_enable_irq(void)
+{
+	if (g_als_data->irq_enabled)
+		return;
+
+	enable_irq(ALSPS_SENSOR_IRQ);
+
+	g_als_data->irq_enabled = true;
+}
+
+static void alsps_disable_irq(void)
+{
+	if (!g_als_data->irq_enabled)
+		return;
+
+	disable_irq_nosync(ALSPS_SENSOR_IRQ);
+
+	g_als_data->irq_enabled = false;
+}
 
 /*=======================
  *|| I2c Stress Test Part ||
