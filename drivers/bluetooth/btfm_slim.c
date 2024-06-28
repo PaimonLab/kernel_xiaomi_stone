@@ -13,6 +13,7 @@
 #include <linux/ratelimit.h>
 #include <linux/slab.h>
 #include <linux/fs.h>
+#include <btfm_slim_wcn3990.h>
 #include <linux/btpower.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
