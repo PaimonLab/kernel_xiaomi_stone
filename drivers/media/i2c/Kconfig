@@ -633,47 +633,6 @@ config VIDEO_OV08D10
           To compile this driver as a module, choose M here: the
           module will be called ov08d10.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 config VIDEO_OV2640
 	tristate "OmniVision OV2640 sensor support"
 	depends on VIDEO_V4L2 && I2C
@@ -1221,6 +1180,17 @@ config VIDEO_ST_MIPID02
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called st-mipid02.
+
+config VIDEO_S5KJN1
+	tristate "Samsung S5KJN1 sensor support"
+	depends on I2C && VIDEO_V4L2
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	help
+	  This is a Video4Linux2 sensor driver for the Samsung
+	  S5KJN1 camera.
+
 
 endmenu
 
