@@ -724,6 +724,14 @@ config CHARGER_WILCO
 	  information can be found in
 	  Documentation/ABI/testing/sysfs-class-power-wilco
 
+config CHARGER_PD_MANAGER
+	tristate "PD policy manager"
+	default y
+	help
+	  Say Y here to enable support of pd manager
+	  It is mainly used as divider charger for
+	  direct charge
+
 source "drivers/power/supply/qcom/Kconfig"
 
 endif # POWER_SUPPLY
